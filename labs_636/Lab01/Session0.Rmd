@@ -1,0 +1,26 @@
+---
+title: "AAE 636 Session 0"
+author: "Sunny"
+output: html_document
+---
+
+##R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Set your own directory
+
+```{r}
+getwd()
+setwd("~/AAE636")
+```
+
+## Graphics
+
+```{r}
+x=rnorm(100)
+y=rnorm(100)
+plot(x,y)
+```

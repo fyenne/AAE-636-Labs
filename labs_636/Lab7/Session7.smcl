@@ -1,0 +1,128 @@
+{smcl}
+{com}{sf}{ul off}{txt}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}/Users/SunnyJieFeng/AAE636/Session7/Session7.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res}31 Oct 2019, 18:44:52
+{txt}
+{com}. 
+. * Getting sample data.
+. use "/Users/SunnyJieFeng/AAE636/Session7/Panel101.dta", clear
+{txt}
+{com}. 
+. * Create a dummy variable to indicate the time when the treatment started. 
+. gen time = (year>=1994) & !missing(year)
+{txt}
+{com}. 
+. * Create a dummy variable to identify the group exposed to the treatment. 
+. gen treated = (country>4) & !missing(country)
+{txt}
+{com}. 
+. * Create an interaction between time and treated. 
+. gen did = time*treated
+{txt}
+{com}. 
+. * Estimating the DID estimator
+. * Method 1:
+. reg y time treated did
+
+{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}        70
+{txt}{hline 13}{c +}{hline 34}   F(3, 66)        = {res}     1.98
+{txt}       Model {c |} {res} 5.1898e+19         3  1.7299e+19   {txt}Prob > F        ={res}    0.1249
+{txt}    Residual {c |} {res} 5.7540e+20        66  8.7181e+18   {txt}R-squared       ={res}    0.0827
+{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0410
+{txt}       Total {c |} {res} 6.2729e+20        69  9.0912e+18   {txt}Root MSE        =   {res} 3.0e+09
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}           y{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 8}time {c |}{col 14}{res}{space 2} 2.29e+09{col 26}{space 2} 9.53e+08{col 37}{space 1}    2.40{col 46}{space 3}0.019{col 54}{space 4} 3.87e+08{col 67}{space 3} 4.19e+09
+{txt}{space 5}treated {c |}{col 14}{res}{space 2} 1.78e+09{col 26}{space 2} 1.13e+09{col 37}{space 1}    1.58{col 46}{space 3}0.120{col 54}{space 4}-4.75e+08{col 67}{space 3} 4.03e+09
+{txt}{space 9}did {c |}{col 14}{res}{space 2}-2.52e+09{col 26}{space 2} 1.46e+09{col 37}{space 1}   -1.73{col 46}{space 3}0.088{col 54}{space 4}-5.43e+09{col 67}{space 3} 3.87e+08
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 3.58e+08{col 26}{space 2} 7.38e+08{col 37}{space 1}    0.49{col 46}{space 3}0.629{col 54}{space 4}-1.12e+09{col 67}{space 3} 1.83e+09
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. 
+. * Method 2:
+. reg y time##treated
+
+{txt}      Source {c |}       SS           df       MS      Number of obs   ={res}        70
+{txt}{hline 13}{c +}{hline 34}   F(3, 66)        = {res}     1.98
+{txt}       Model {c |} {res} 5.1898e+19         3  1.7299e+19   {txt}Prob > F        ={res}    0.1249
+{txt}    Residual {c |} {res} 5.7540e+20        66  8.7181e+18   {txt}R-squared       ={res}    0.0827
+{txt}{hline 13}{c +}{hline 34}   Adj R-squared   ={res}    0.0410
+{txt}       Total {c |} {res} 6.2729e+20        69  9.0912e+18   {txt}Root MSE        =   {res} 3.0e+09
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 1}           y{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 6}1.time {c |}{col 14}{res}{space 2} 2.29e+09{col 26}{space 2} 9.53e+08{col 37}{space 1}    2.40{col 46}{space 3}0.019{col 54}{space 4} 3.87e+08{col 67}{space 3} 4.19e+09
+{txt}{space 3}1.treated {c |}{col 14}{res}{space 2} 1.78e+09{col 26}{space 2} 1.13e+09{col 37}{space 1}    1.58{col 46}{space 3}0.120{col 54}{space 4}-4.75e+08{col 67}{space 3} 4.03e+09
+{txt}{space 12} {c |}
+time#treated {c |}
+{space 8}1 1  {c |}{col 14}{res}{space 2}-2.52e+09{col 26}{space 2} 1.46e+09{col 37}{space 1}   -1.73{col 46}{space 3}0.088{col 54}{space 4}-5.43e+09{col 67}{space 3} 3.87e+08
+{txt}{space 12} {c |}
+{space 7}_cons {c |}{col 14}{res}{space 2} 3.58e+08{col 26}{space 2} 7.38e+08{col 37}{space 1}    0.49{col 46}{space 3}0.629{col 54}{space 4}-1.12e+09{col 67}{space 3} 1.83e+09
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. 
+. * Method 3:
+. ssc install diff
+{txt}checking {hilite:diff} consistency and verifying not already installed...
+all files already exist and are up to date.
+
+{com}. diff y, t(treated) p(time)
+
+{txt}{title:DIFFERENCE-IN-DIFFERENCES ESTIMATION RESULTS}
+{p}Number of observations in the DIFF-IN-DIFF:{res} 70{res}{p_end}
+{txt}            Before         After    
+   Control:{res}{col 13}16{col 28}24{txt}{col 40}40
+   Treated:{res}{col 13}12{col 28}18{txt}{col 40}30
+{col 13}28{col 28}42
+{hline 56}
+ Outcome var.   {c |} {res}y{col 27}{txt}{c |} S. Err. {c |}   |t|   {c |}  P>|t|
+{hline 16}{c +}{hline 9}{c +}{hline 9}{c +}{hline 9}{c +}{hline 9}
+Before  {col 17}{c |} {col 27}{c |} {col 37}{c |} {col 47}{c |} 
+   Control{col 17}{c |} {com} 3.6e+08{col 27}{txt}{c |} {com}{col 37}{txt}{c |} {com}{col 47}{txt}{c |} 
+   Treated{col 17}{c |} {com} 2.1e+09{col 27}{txt}{c |} {com}{col 37}{txt}{c |} {com}{col 47}{txt}{c |} 
+   Diff (T-C){col 17}{c |} {res} 1.8e+09{col 27}{txt}{c |} {res} 1.1e+09{col 37}{txt}{c |} {res}1.58{col 47}{txt}{c |} {res}0.120
+{txt}After    {col 17}{c |} {col 27}{c |} {col 37}{c |} {col 47}{c |} 
+   Control{col 17}{c |} {com} 2.6e+09{col 27}{txt}{c |} {com}{col 37}{txt}{c |} {com}{col 47}{txt}{c |} 
+   Treated{col 17}{c |} {com} 1.9e+09{col 27}{txt}{c |} {com}{col 37}{txt}{c |} {com}{col 47}{txt}{c |} 
+   Diff (T-C){col 17}{c |} {res}-7.4e+08{col 27}{txt}{c |} {res} 9.2e+08{col 37}{txt}{c |} {res}0.81{col 47}{txt}{c |} {res}0.422
+{col 17}{txt}{c |} {col 27}{c |} {col 37}{c |} {col 47}{c |} 
+Diff-in-Diff{col 17}{c |} {res}-2.5e+09{col 27}{txt}{c |} {res} 1.5e+09{col 37}{txt}{c |} {res}1.73{col 47}{txt}{c |} {res}0.088*
+{txt}{hline 56}
+R-square:{res}    0.08
+{txt}* Means and Standard Errors are estimated by linear regression
+**Inference: *** p<0.01; ** p<0.05; * p<0.1
+
+{com}. 
+. * Estimating the DID estimator with Robust SE
+. reg y time treated did,r
+
+{txt}Linear regression                               Number of obs     = {res}        70
+                                                {txt}F(3, 66)          =  {res}     2.17
+                                                {txt}Prob > F          = {res}    0.0998
+                                                {txt}R-squared         = {res}    0.0827
+                                                {txt}Root MSE          =    {res} 3.0e+09
+
+{txt}{hline 13}{c TT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{col 14}{c |}{col 26}    Robust
+{col 1}           y{col 14}{c |}      Coef.{col 26}   Std. Err.{col 38}      t{col 46}   P>|t|{col 54}     [95% Con{col 67}f. Interval]
+{hline 13}{c +}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{space 8}time {c |}{col 14}{res}{space 2} 2.29e+09{col 26}{space 2} 9.00e+08{col 37}{space 1}    2.54{col 46}{space 3}0.013{col 54}{space 4} 4.92e+08{col 67}{space 3} 4.09e+09
+{txt}{space 5}treated {c |}{col 14}{res}{space 2} 1.78e+09{col 26}{space 2} 1.05e+09{col 37}{space 1}    1.70{col 46}{space 3}0.094{col 54}{space 4}-3.11e+08{col 67}{space 3} 3.86e+09
+{txt}{space 9}did {c |}{col 14}{res}{space 2}-2.52e+09{col 26}{space 2} 1.45e+09{col 37}{space 1}   -1.73{col 46}{space 3}0.088{col 54}{space 4}-5.42e+09{col 67}{space 3} 3.81e+08
+{txt}{space 7}_cons {c |}{col 14}{res}{space 2} 3.58e+08{col 26}{space 2} 7.61e+08{col 37}{space 1}    0.47{col 46}{space 3}0.640{col 54}{space 4}-1.16e+09{col 67}{space 3} 1.88e+09
+{txt}{hline 13}{c BT}{hline 11}{hline 11}{hline 9}{hline 8}{hline 13}{hline 12}
+{res}{txt}
+{com}. 
+. log close
+      {txt}name:  {res}<unnamed>
+       {txt}log:  {res}/Users/SunnyJieFeng/AAE636/Session7/Session7.smcl
+  {txt}log type:  {res}smcl
+ {txt}closed on:  {res}31 Oct 2019, 18:44:52
+{txt}{.-}
+{smcl}
+{txt}{sf}{ul off}

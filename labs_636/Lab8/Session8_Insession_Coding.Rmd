@@ -1,0 +1,173 @@
+---
+title: "Session8 In-Session Exercise"
+author: "Sunny"
+date: "11/15/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=T, include=FALSE}
+## 0. General setups as usual
+## References: https://sites.google.com/site/econometricsacademy/econometrics-models/panel-data-models;
+###############https://bookdown.org/ccolonescu/RPoE4/heteroskedasticity.html.
+
+##Set your own directory
+# setwd("~/AAE636/Session8")
+# rm(list=ls())
+
+##Install Wooldridge data
+library(dplyr)# this is for mutate function
+library(magrittr) # this is for the Pipe function %>%
+library(psych)
+library(foreign)# this package contains read.dta command
+library(car)
+library(data.table)
+library(knitr)
+library(ggplot2)
+
+library(lmtest) #for coeftest() and bptest().
+library(broom) #for glance() and tidy()
+library(car) #for hccm() robust standard errors
+library(RCurl)# For the robust SE method 1
+library(sandwich)
+
+library(plm)# this package is for panel regression
+```
+
+### 1. Heteroskedasticity and Clustered Standard Errors
+
+Example Code:
+We are using panel_wage.dta data, and we would like to use the following variables for our regression:
+
+dependent: log(wage): lwage
+independent: education: ed; exprience: exp; weeks worked: wks
+```{r}
+# Getting sample data.
+wagedata <- read.dta('panel_wage.dta')
+names(wagedata)
+head(wagedata)
+```
+
+#### 1.1. Test for Heteroskedasticity
+```{r }
+#Method 1. Graph the residuals
+olsfit <- lm(lwage ~ exp+wks+ed, data=wagedata)
+summary(olsfit)
+residual <- residuals(olsfit)
+
+plot(residual~wagedata$ed, xlab="Education", ylab="Residuals")
+plot(residual~wagedata$exp, xlab="Experience", ylab="Residuals")
+
+#Method 2. Breusch-Pagan Test
+#install.packages("lmtest") #Install this first if you don't have the package
+library(lmtest)
+bptest(olsfit)
+# A p-Value > 0.05 indicates that the null hypothesis(the variance is unchanging in the residual) can be rejected and therefore heterscedasticity exists. This can be confirmed by running a global validation of linear model assumptions (gvlma) on the lm objec
+```
+
+#### 1.2. Clustered SE
+```{r}
+#Robust: this will generate the same result as stata
+# import the function from repository
+url_robust <- "https://raw.githubusercontent.com/IsidoreBeautrelet/economictheoryblog/master/robust_summary.R"
+eval(parse(text = getURL(url_robust, ssl.verifypeer = FALSE)),envir=.GlobalEnv)
+
+summary(olsfit)$coefficient
+
+summary(olsfit, robust = T)$coefficient
+
+Robust = c("HC3", "HC", "HC0", "HC1", "HC2", "HC4", "HC4m", "HC5")
+#clustered SE: just plug in the varible name into the cluster
+coeftest(olsfit, vcov = vcovHC(olsfit, cluster = "education"))
+
+```
+
+### 2. Panel Estimation
+
+```{r}
+#install.packages("plm")
+#library(plm)
+```
+
+#### Set the "group" and "time" variables
+
+same as xtset in Stata, the same id and the t should have no more than one observations.
+
+Group: individual : id
+
+Time: year: t
+```{r}
+pdata <- plm.data(wagedata, index=c("id","t"))
+pdata <- pdata.frame(wagedata,index = c("id","t"), drop.index = TRUE)
+```
+
+#### Pooled OLS estimator
+```{r}
+pooling <- plm(lwage ~ exp+wks+ed, data=pdata, model= "pooling")
+summary(pooling, robust = T)$coefficient
+coeftest(pooling, vcov = vcovHC(pooling, cluster = "group"))
+coeftest(pooling, vcov = vcovHC(pooling, cluster = "time"))
+```
+
+#### Between estimator
+```{r}
+between <- plm(lwage ~ exp+wks+ed, data=pdata, model= "between")
+summary(between, robust = T)$coefficient
+coeftest(pooling, vcov = vcovHC(pooling, cluster = "group"))
+```
+
+#### First differences estimator
+```{r}
+firstdiff <- plm(lwage ~ exp+wks+ed, data=pdata, model= "fd")
+summary(firstdiff, robust = T)$coefficient
+coeftest(firstdiff, vcov = vcovHC(firstdiff, cluster = "group"))
+
+#we don't need to include the exp and ed in the regression
+firstdiff <- plm(lwage ~ wks, data=pdata, model= "fd")
+summary(firstdiff, robust = T)$coefficient
+coeftest(firstdiff, vcov = vcovHC(firstdiff, cluster = "group"))
+```
+
+#### Fixed effects or within estimator
+```{r}
+fixed <- plm(lwage ~ exp+wks+ed, data=pdata, model= "within")
+summary(fixed, robust = T)$coefficient
+coeftest(fixed, vcov = vcovHC(fixed, cluster = "group"))
+```
+
+#### Random effects estimator
+```{r}
+random <- plm(lwage ~ exp+wks+ed, data=pdata, model= "random")
+summary(random, robust = T)$coefficient
+coeftest(random, vcov = vcovHC(random, cluster = "group"))
+```
+
+#### Fixed effects for time and individual
+```{r}
+twoway.fixed <- plm(lwage ~ exp+wks+ed, data=pdata, model= "within",method="twoways")
+summary(twoway.fixed, robust = T)$coefficient
+coeftest(twoway.fixed, vcov = vcovHC(twoway.fixed, cluster = "group"))
+```
+
+#### Random effects for time and individual
+```{r}
+twoway.random <- plm(lwage ~ exp+wks+ed, data=pdata, model= "random",method="twoways")
+summary(twoway.random, robust = T)$coefficient
+coeftest(twoway.random, vcov = vcovHC(twoway.random, cluster = "group"))
+```
+
+### 3. In-Session Exercise
+#### First differences estimator
+1. Write down the regression equations for this model, the regressors we are using is ***exp, exp2(experience square), wks, and ed***, make proper assumptions to identify the coefficient for experience. Hints: experience increases one together with the year.
+
+2. Interpret each of the coefficients of the regression.
+
+```{r}
+firstdiff <- plm(lwage ~ exp+exp2+wks+ed, data=pdata, model= "fd")
+summary(firstdiff, robust = T)$coefficient
+coeftest(firstdiff, vcov = vcovHC(firstdiff, cluster = "group"))
+```

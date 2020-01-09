@@ -1,0 +1,98 @@
+---
+title: "Session 4"
+author: "Sunny"
+date: "10/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 0. Basic Setup
+```{r,, message=FALSE}
+library(plyr)
+library(maps)
+library(zipcode)
+library(wooldridge)
+library(tidyverse)
+# setwd("~/AAE636/Session4")
+# rm(list=ls())
+# load("~/AAE636/Assignment 1/wage2.RData")
+attach(wage2)
+data <- wage2
+```
+
+### 1. Correlation Matrix and Variance-Covariance Matrix
+```{r}
+sample <- data.frame(data['wage'], data['educ'],data['tenure'],data['age'],3-data['age'])
+dim(sample)
+sample <- na.omit(sample)#always check for your own sample
+dim(sample)
+
+cor(sample) %>%
+ knitr::kable()
+cov(sample) %>% 
+ knitr::kable() 
+```
+
+### 2. Collinearity:
+Examples: dummy variables,cross terms.
+
+If it is perfect collinearity, R and Stata will both drop it. $But\ if\ it\ is\ not\ perferct\ collinearity$, sometimes R can run with lm or regress in stata without $droping$ the variable. But it can ruin your results, in general you will get very high F-statistics but failed the t-tests. Solutions: you can use correlation matrix, multicollinearity test, or just eliminate redundant variables by viewing them one by one.
+
+```{r}
+summary(lm(wage~.,data=sample))#drop the second appearing collineared variable 
+
+summary(lm(wage~.-age.1,data=sample))
+
+```
+
+### Discussion: Should we include all the variables that have correlation with wage?
+Example: variables have the same/opposite trend will have very high correlation, but not necessarily causal relationship.
+For each variable that you add in, you need to justify it. Very different from CS or Stats Department.
+
+### Generalized "linear" regression
+level-level model y~x： one unit change in x leads to $\beta_1$ unit change in the conditional expection of y.
+
+
+log-level model ln(y)~x： one unit change in x leads to $(100*\beta_1)\%$ change in the conditional expection of y.
+
+log- log model ln(y)~ln(x)： 1% change in x leads to $\beta_1\%$ change in the conditional expection of y.
+
+level-log model y~ln(x)： 1% change in x leads to $(\beta_1/100)\%$change in the conditional expection of y.
+
+Polynomial can also be regarded as "linear", but sometimes not very meaningful in interpretation.
+
+### 3. MLR
+Let's focus on wage with education and experience, we would like to estimate: $wage =\beta_0+\beta_1*education+\beta_2*experience$
+
+```{r}
+ir<- rnorm(length(wage)) 
+focus<-data.frame(data['wage'], data['educ'],data['exper'],ir)
+fit.two<-lm(wage~educ+exper,data = focus)
+summary(fit.two)
+
+anova(fit.two)
+vcov(fit.two)
+fit.one<-lm(wage~educ, data = focus)
+summary(fit.one)
+twoone.fit<-lm(exper~educ,data = focus)
+summary(twoone.fit)
+
+fit.two$coefficient['educ']+fit.two$coefficient['exper']*twoone.fit$coefficient['educ']
+
+fit.one$coefficient['educ']
+
+# adjusted R - square, degree of freedom adjusted.
+# use it to judge if the lm is better;.
+# R - square increased if add any irrelevent :
+# lm(formula = wage~educ + ir, data = focus) and ir add extra std.error to X
+```
+
+#### If the ommited variable is irrelevant
+```{r}
+summary(lm(wage~ir,data = focus))
+summary(lm(wage~educ+ir,data = focus))
+```
+

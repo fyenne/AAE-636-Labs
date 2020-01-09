@@ -1,0 +1,263 @@
+---
+title: "AAE636 Assignment 2"
+author: "Yan Siming"
+output:
+html_document:
+highlight: tango
+theme: cerulean
+toc: yes
+toc_float: yes
+pdf_document:
+toc: yes
+---
+
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(grid)
+library(psych)
+library(wooldridge)
+library(BSDA)
+
+# install.package(car) ?
+# install.package(data.table, type = "binary")  ?
+
+```
+
+
+
+```{r }
+##4. Hypothesis testing
+# a. F-test: beta_1=beta_2=0 at 0.05 siginificance level
+# b. t-test: beta_1=beta_2 at 0.05 siginificance level by rewriting your model
+# c. t-test: beta_1=beta_2 at 0.05 siginificance level step by step BY HAND
+# d. F-test: beta_1=beta_2 at 0.05 siginificance level, and what is the relationship between the F-test and t-test here?
+data("sleep75")
+attach(sleep75)
+data <- data.frame(sleep75)
+# attach(sleep75)
+# slpnaps=beta_1*totwrk+beta_2*marr+beta_3*yrsmarr+beta_4*age+
+###################+beta_5*agesq+beta_6*educ+beta_7*male+beta_8*gdhlth+
+###################+beta_9*yngkid+beta_10*prot+beta_11*black+beta_0
+```
+
+
+```{r }
+summary(data)
+fit1 <- lm(slpnaps ~ totwrk + marr+ yrsmarr+ age+agesq+educ+male+gdhlth+yngkid+prot+black, data = data)
+summary(fit1)
+```
+
+```{r}
+##4. Hypothesis testing
+# a. F-test: beta_1=beta_2=0 at 0.05 siginificance level
+# b. t-test: beta_1=beta_2 at 0.05 siginificance level by rewriting your model
+# c. t-test: beta_1=beta_2 at 0.05 siginificance level step by step BY HAND
+# d. F-test: beta_1=beta_2 at 0.05 siginificance level, and what is the relationship between the F-test and t-test here?
+
+tvalue <- (fit1$coefficients[2] -  fit1$coefficients[3])/(-57.26547+0.02041)
+tvalue
+isTRUE(tvalue > 1.96)
+t.test(totwrk, marr)
+var.test(totwrk, marr)
+59.512^2
+```
+
+```{r}
+length(data)
+anova
+Fvalue <-  0.1548^2/(2)/(1- 0.1548^2)*(706-11-1)
+Fvalue 
+isTRUE(tvalue^2 == Fvalue)
+var.test(c(totwrk,marr, yrsmarr, age,agesq,educ,male,gdhlth,yngkid,prot,black),slpnaps)
+# SST <- sum((slpnaps-mean(totwrk))^2)
+# SSE <- sum((yhat-mean(price))^2)
+# SSR <- sum((price-yhat)^2)
+library(car)
+```
+
+
+#--------------------------------------------
+
+#--------------------------------------------
+#--------------------------------------------
+```{r}
+summary(lm(slpnaps~totwrk,data = data))
+
+# t-stats=-9.674
+# F-stats=93.6
+# (-9.674)^2=93.6
+
+# model 2. slpnaps=beta_1*totwrk+beta_2*educ+beta_0, find out the F-stats and t-stats for totwrk , is there any relationship between them?
+summary(lm(slpnaps~totwrk+educ,data = data))
+```
+
+```{r}
+all.fit <- lm(slpnaps~totwrk+marr+yrsmarr+age+agesq+educ+male+gdhlth+
+                yngkid+prot+black,data = data)
+summary(all.fit)
+
+# men.fit <- lm(slpnaps~totwrk+marr+yrsmarr+age+agesq+educ+male+gdhlth+
+#                 yngkid+prot+black,data = men)
+# summary(men.fit)
+# 
+# women.fit <- lm(slpnaps~totwrk+marr+yrsmarr+age+agesq+educ+male+gdhlth+
+#                   yngkid+prot+black,data = women)
+# summary(women.fit)
+```
+
+```{r}
+
+##  Q_a. F-test: beta_1=beta_2=0 at 0.05 siginificance level
+
+#--------------------------------------------
+
+#method 1.
+#--------------------------------------------
+
+k <- 11 #number of regressors(not including the intercept)
+n <- dim(all)[1]
+r <- 2 #number of restrictions
+qf(.95,r,n-k-1)   # f- test critique value 
+#method 1.
+linearHypothesis(all.fit,c("totwrk=0","marr=0"), test="F")
+#  # linearHypothesis(all.fit,  #function 
+#  # c("totwrk=0","marr=0"),  #H_0 
+#  # test="F")            #test method
+1-pf(47.743, r, n-k-1)  # f-value , df1, df2.
+``` 
+
+$$
+F = \frac{(SSR_r-SSR_{ur})/(number\ of\  restriction)} {SSR_{ur}/(number\ of \ para \ in \ ur\ model)} \\\\
+which\ the \ denominator \ equals \ to \ MSR_{ur}
+$$
+
+
+
+```{r}
+#--------------------------------------------
+#Q_a
+#method 2.
+#--------------------------------------------
+
+# this is a test for beta1 = beta2 = 0
+all.fit.Restrict <- lm(slpnaps~yrsmarr+age+agesq+educ+male+gdhlth+
+                         yngkid+prot+black,data = data)
+# restricted.lm has delete 2 parameters of \beta_1 and \beta_2
+# so that we can use F-test to R\UR model and figure out if \beta_1 and \beta_2 = 0
+# using the function 
+anova(all.fit)
+
+anova(all.fit.Restrict)
+F.stat <- (168826203-148407099)/2/(213843) #SSRr - SSRur / k / MSRd
+F.stat
+#F.stat=47.74321
+```
+
+
+
+```{r}
+#--------------------------------------------
+# Q_a
+#method 3: Lagrange Multiplier
+#--------------------------------------------
+
+all.fit.Lagrange <- lm(slpnaps~yrsmarr+age+agesq+educ+male+gdhlth+
+                         yngkid+prot+black,data = data)
+# this go without two first paras
+
+all.fit.Lagrange.aux <-    lm(all.fit.Lagrange$residuals~totwrk+marr+yrsmarr+age+agesq+educ+male+gdhlth+yngkid+prot+black, data = data)
+
+# this go with  ## called auxiliary regression  # class12- page 22
+
+summary(all.fit.Lagrange.aux)
+
+#Lagrange Multiplier Stat
+qchisq(.95, df=2) # kafang  chisquared, df = num of paras who are excluded
+
+n*0.1209 # multiple R-squared of  R_u ^2
+
+#  n*0.1209 > qchisq(.95, df=2) # reject
+```
+
+
+
+
+
+```{r}
+# b. t-test: beta_1=beta_2 at 0.05 siginificance level by rewriting your model
+
+
+
+# if beta_1=beta_2, then totwrk*beta1 + marr* beta2 = (totwrk +marr)* beta1
+# write add a colum with name of totwrkm work + marr
+all$totwrkm <-all$totwrk+all$marr
+all.fit2 <- lm(slpnaps~totwrk+yrsmarr+age+agesq+educ+male+gdhlth+
+                yngkid+prot+black+totwrkm,data = all)
+summary(all.fit2)
+# t-stat: -0.283  # t-value in the table is test if beta = 0 value.
+#we fail reject the null hypothesis that beta_1=beta_2
+
+
+#--------------------------------------------
+
+# if beta1=beta2 then ,after adding totwrkm, any of totwrk or marr regressor 
+ # should be 0
+#--------------------------------------------
+
+all.fit3 <- lm(slpnaps~marr+yrsmarr+age+agesq+educ+male+gdhlth+
+                yngkid+prot+black+totwrkm,data = all)
+summary(all.fit3)
+```
+
+
+
+```{r}
+# c. t-test: beta_1=beta_2 at 0.05 siginificance level step by step BY HAND
+vcov(all.fit)
+# variance and covariance
+t.stat <- (all.fit$coefficients['totwrk']-all.fit$coefficients['marr'])/(sqrt(0.0004166623+3.279334e+03-2*0.0541394655))
+
+# t-stat: -0.2834963
+#we fail reject the null hypothesis that beta_1=beta_2
+
+# d. F-test: beta_1=beta_2 at 0.05 siginificance level, and what is the relationship between the F-test and t-test here?
+linearHypothesis(all.fit,c("totwrk=marr"), test="F")
+#F-stat:0.0804=(-0.2834963)^2
+#we fail reject the null hypothesis that beta_1=beta_2
+```
+
+$$
+2\ paras\ equality\ ----->\ t-test\\\\\\
+t = \frac {\hat \beta_1-\hat \beta_2 - (\beta_1 - \beta_2)}{\sqrt {var(\hat \beta_1)-
+var(\hat \beta_2) - 2Cov(\hat \beta_1,\hat \beta_2)}}\\\\
+denominator\ is \ SE(\hat \beta_1- \hat \beta_2)
+$$
+
+$$
+F = \frac{(SSR_r-SSR_{ur})/(number\ of\  restriction)} {SSR_{ur}/(number\ of \ para \ in \ ur\ model)} \\\\
+which\ the \ denominator \ equals \ to \ MSR_{ur}
+$$
+
+
+
+assignment 3 
+
+```{r, include=FALSE}
+ggscatter(data, x = "nox", y = "price",  color = "black", fill = "lightgray", 
+          palette = "Set1", alpha = I(1/3), shape = 16, 
+          add = "reg.line", conf.int = TRUE, conf.int.level = 0.95,
+          cor.coef = TRUE, 
+          cor.coeff.args = list(method = "pearson", label.x.npc = 0.68, label.y.npc = "top"),
+          xlab = "nox. in parts per 100million", ylab = "price")
+```
+
+
+
+```{r}
+
+# 1c
+vcov(data[1,3])[1,2]/vcov(data[1,3])[2,2]   #wrong
+linearHypothesis(fit1, "nox", test="F")
+```

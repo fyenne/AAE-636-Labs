@@ -1,0 +1,172 @@
+---
+title: "Session2"
+author: "Sunny"
+date: "9/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 0. Set your own directory and load the data
+
+```{r}
+getwd()
+library(wooldridge)
+setwd("/Users/fyenne/R_hahaha/R_lab/Lab 2")
+data <- wage2
+names(data)
+dim(data)[1]
+mean(age)
+sd(wage)
+mean(wage[tenure<5])
+B <-  mean(exper[married==1])
+B
+lm.fit <- lm(formula = wage ~ educ, data = data)
+summary(lm.fit)  # 斜率
+
+```
+
+## 1. Take a look at your data
+
+a. How many observations are in the dataset?
+b. What is the sample mean of age?
+c. What is the standard deviation of monthly wages?
+d. What is the average monthly wages of individuals with LESS THAN FIVE years of job tenure?
+e. What is the sample mean of experience for workers who are married?
+
+```{r data}
+attach(data)
+names(data)
+dim(data)[1]
+mean(age)
+sd(wage)
+mean(wage[tenure<5])
+B <-  mean(exper[married==1])
+B
+```
+
+## 2. OLS: The Best Linear Unbiased Estimator
+Why do we care about the unbiasness, consistency, and #efficiency?
+
+### one parameter example
+```{r}
+lm.fit <- lm(formula = wage ~ educ, data = data)
+lm.fit2 <- lm(formula = wage ~ ., data = data)
+summary(lm.fit)
+p1 <-ggplot(wage2 ,aes(wage, educ)) + geom_point() + geom_smooth(method = "lm", 
+                                                              )
+```
+
+
+```{r}
+estimate <- predict(lm.fit)
+estimate2 <- lm.fit$fitted.values
+identical(estimate,estimate2)
+
+#residuals  # lm.fit <- lm(formula = wage ~ educ, data = data)
+mu <- residuals(lm.fit)
+mu2 <- lm.fit$residuals
+identical(mu,mu2)
+
+#estimated coefficients
+beta <- lm.fit$coefficients
+
+#numeric properties
+xmu<-educ*mu
+yhatmu<-estimate*mu
+ymu<-wage*mu
+mumu<-mu*mu
+sum(mu)# almost 0
+sum(xmu)# almost 0
+sum(yhatmu)# almost 0
+sum(ymu)# what is this?
+sum(mumu)
+```
+### Hypothesis Testing and Confidence Intervals
+
+```{r}
+#z-statistics and t-statistics：
+qnorm(1-.05/2)#z-statistics
+qt(1-.05/2,30)#t-statistics , significants level
+qt(1-.05/2,200)
+qt(1-.05/2,2000)
+```
+
+### Example: Genarate the two-tailed 95% CI for married people's wage
+
+```{r}
+x<-wage[married==1]
+
+mwage<-mean(x)
+sdmwage<-sd(x)
+lenm<-length(x)
+
+z<-qnorm(1-.05/2)
+
+dof<-lenm-1
+t<-qt(1-.05/2,dof)
+
+CI <- c(mwage-z*sdmwage/sqrt(lenm),mwage+z*sdmwage/sqrt(lenm))
+CI
+CI <- c(mwage-t*sdmwage/sqrt(lenm),mwage+t*sdmwage/sqrt(lenm))
+CI
+
+```
+
+### Example: Hypothesis test
+Test if the wage mean of the married people is equal to 900:
+NULL Hypothesis $H_0$: $mwage=900$
+
+Alternative Hypothesis $H_1$: $mwage\neq 900$
+
+```{r}
+#One step method
+t.test(x,mu = 900)
+
+#Step by Step method
+t.estimate<-(mwage-900)/(sdmwage/sqrt(lenm))
+t.estimate
+
+isTRUE(t.estimate>z)
+
+isTRUE(t.estimate>t)
+
+#--------------------------------------------
+#--------------------------------------------
+
+# t.test(x, …)
+# # S3 method for default
+# t.test(x, y = NULL,
+#        alternative = c("two.sided", "less", "greater"),
+#        mu = 0, paired = FALSE, var.equal = FALSE,
+#        conf.level = 0.95, …)
+# 
+# # S3 method for formula
+# t.test(formula, data, subset, na.action, …)
+#--------------------------------------------
+
+# ols(formula, data, weights, subset, na.action=na.delete, 
+#     method="qr", model=FALSE,
+#     x=FALSE, y=FALSE, se.fit=FALSE, linear.predictors=TRUE,
+#     penalty=0, penalty.matrix, tol=1e-7, sigma,
+#     var.penalty=c('simple','sandwich'), …)
+#--------------------------------------------
+
+# predict 
+# Make a Raster object with predictions from a fitted model object
+# predict(object, model, filename="", fun=predict, ext=NULL, 
+#    const=NULL, index=1, na.rm=TRUE, inf.rm=FALSE, factors=NULL, 
+#    format, datatype, overwrite=FALSE, progress='', ...)
+#--------------------------------------------
+# identical
+#  The safe and reliable way to test two objects for being exactly equal.
+# identical(x, y, num.eq = TRUE, single.NA = TRUE, attrib.as.set = TRUE,
+           # ignore.bytecode = TRUE, ignore.environment = FALSE,
+          # ignore.srcref = TRUE)
+#--------------------------------------------
+#--------------------------------------------
+```
+```
+

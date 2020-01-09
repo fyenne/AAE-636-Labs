@@ -1,0 +1,71 @@
+---
+title: '1'
+author: "Siming Yan"
+date: "9/27/2019"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+---
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(tidyverse)
+library(grid)
+library(psych)
+library(wooldridge)
+library(BSDA)
+describe(wage2)
+attach(wage2)
+data <- wage2
+ybar <- mean(wage)
+yvar <- sd(wage)#sample sd
+xbar <- mean(educ)
+xvar <- sd(educ)
+yvar
+```
+
+---
+```{r}
+fit<-aov(educ~wage,data=data)
+summary(fit)
+1-fit$Pr
+```
+
+---
+```{r}
+lm.fit <- lm(formula = wage ~ educ, data = data)
+#lm.fit2 <- lm(formula = wage ~ ., data = data)
+# summary(lm.fit)
+# Residual <- lm.fit$residuals
+# Residual
+
+```
+
+
+<!-- pt(t,dof) = p -->
+<!-- #双边要乘2 -->
+<!-- qt(p,dof) = t -->
+<!-- $\bigoplus$$\neq$ -->
+
+---
+output:
+  ioslides_presentation:
+    incremental: true
+---
+
+

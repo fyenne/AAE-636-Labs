@@ -1,0 +1,211 @@
+---
+title: "Session6 In-Session Coding Exercise"
+author: "Sunny"
+date: "10/22/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=T, include=FALSE}
+## 0. General setups as usual
+##Set your own directory
+setwd("~/AAE636/Session6")
+rm(list=ls())
+
+##Install Wooldridge data
+library("wooldridge")
+library(psych)
+library(foreign)# this package contains read.dta command
+library(car)
+library(data.table)
+library(knitr)
+
+data("sleep75")
+```
+
+
+### Tips for reading the csv file or dta file
+
+```{r}
+cpsdata <- read.csv('cps_extract_2004.csv',header = T)
+names(cpsdata)
+cpsdata <- read.dta('cps_extract_2004.dta')
+names(cpsdata)
+
+```
+
+## 1. Elasticity and Log/Level Regression
+level-level model y~x： one unit change in x leads to $\beta_1$ unit change in the conditional expectation of y.
+
+log-level model ln(y)~x： one unit change in x leads to $(100*\beta_1)\%$ change in the conditional expectation of y.
+
+level-log model y~ln(x)： 1% change in x leads to $(\beta_1/100)$change in the conditional expectation of y.
+
+log- log model ln(y)~ln(x)： 1% change in x leads to $\beta_1\%$ change in the conditional expectation of y.
+
+
+#### We have a problem here: there are 0s in our **totwrk**.
+
+One simple way is just to drop it and run seperate regressions for the dropped sample since their elasticity doesn't follow our linear regression (log0 is -Inf).The other way is to transform your data a bit, such as adding 1 to the total work time, but the interpretation is different. Here we just drop it.
+
+### a. Level-Level regression
+
+#### Coding exercise: Calculate elasticity at the mean
+
+```{r}
+level.level.fit <- lm(slpnaps~totwrk,data = sleep75)
+summary(level.level.fit)
+#Calculate elasticity at the mean.
+slpnaps.mean <- mean(sleep75$slpnaps)
+totwrk.mean <- mean(sleep75$totwrk)
+level.level.e <- level.level.fit$coefficients['totwrk']*totwrk.mean/slpnaps.mean
+level.level.e
+```
+
+### b. Log-Level regression
+
+#### Coding exercise: Calculate elasticity at the mean
+
+```{r}
+sleep75$log.totwrk <- log(sleep75$totwrk)
+sleep75$log.slpnaps <- log(sleep75$slpnaps)
+log.level.fit <- lm(log.slpnaps~totwrk,data = sleep75)
+summary(log.level.fit)
+#Calculate elasticity at the mean.
+log.level.e <- log.level.fit$coefficients['totwrk']*totwrk.mean
+log.level.e
+```
+
+### c. Level-Log regression
+
+#### Coding exercise: Calculate elasticity at the mean
+
+```{r}
+dim(sleep75)
+level.log.fit <- lm(slpnaps~log.totwrk,data = sleep75,subset = totwrk>0)
+summary(level.log.fit)
+#Calculate elasticity at the mean
+level.log.e <- level.log.fit$coefficients['log.totwrk']/slpnaps.mean
+level.log.e
+```
+
+### d. Log-Log regression
+
+#### Coding exercise: Calculate elasticity
+
+```{r}
+log.log.fit <- lm(log.slpnaps~log.totwrk,data = sleep75,subset = totwrk>0)
+summary(log.log.fit)
+#Report the elasticity
+log.log.e <- log.log.fit$coefficients['log.totwrk']
+log.log.e
+```
+
+#### Compare the 4 elasticity results
+```{r echo=FALSE,results="asis" }
+x <- data.frame("Regression" = c("Level-Level","Log-Level","Level-Log","Log-Log"), "Value" = c(level.level.e,log.level.e,level.log.e,log.log.e))
+kable(x)
+
+```
+
+## 2. Higher Orders
+
+#### Coding exercise: Calculate the expected change in sleep time for someone who increases his/her working time from 20 hours to 21 hours.
+
+```{r}
+# Adding the squared term of totwrk in the regression
+sleep75$totwrksq <- (sleep75$totwrk)^2
+square.fit <- lm(slpnaps~totwrk+totwrksq,data = sleep75)
+summary(square.fit)
+
+#We normally don't interpret the insignificant variables, here it is just for the illustration purposes.
+
+#Method 1: Point to Point Approximation
+change1 <- square.fit$coefficients["totwrk"]*21*60+square.fit$coefficients["totwrksq"]*(21*60)^2 - square.fit$coefficients["totwrk"]*20*60+square.fit$coefficients["totwrksq"]*(20*60)^2
+change1
+#Method 2: Linear Approximation
+change2 <- (square.fit$coefficients["totwrk"]+2*square.fit$coefficients["totwrksq"]*(21+20)*60/2)*(21-20)*60
+change2
+```
+
+
+# 3. Dummy Variables
+
+#### Coding Exercise: Calculate the expected difference of sleeping time for women and men conditional on the same total working time.
+
+```{r}
+dummy.fit <- lm(slpnaps~totwrk+male,data = sleep75)
+summary(dummy.fit)
+dummy.fit$coefficients["male"]
+#Adding a cross term would catch the slope differences.
+dummy2.fit <- lm(slpnaps~totwrk+male+totwrk*male,data = sleep75)
+summary(dummy2.fit)
+#The expected difference of sleeping time for women and men conditional on the same total working time, e.g., at the mean is:
+dummy2.fit$coefficients["male"]+dummy2.fit$coefficients["totwrk:male"]*totwrk.mean
+dummy2.fit
+```
+
+### Generate the categorical dummy variables
+
+#### Coding Exercise: Generate the dummies for education: 
+
+MiddleSchool: education<9;
+HighSchool: 9<=education<12;
+Undergraduate: 12<=education<16;
+Graduate: education>=16;
+```{r}
+#Generate the dummies
+MiddleSchool <- as.numeric(sleep75$educ < 9)
+HighSchool <- as.numeric(sleep75$educ < 12 & sleep75$educ >= 9)
+Undergraduate <- as.numeric(sleep75$educ < 16 & sleep75$educ >= 12)
+Graduate <- as.numeric(sleep75$educ >= 16)
+
+#Use MiddlesSchool as the reference
+cate.fit <- lm(slpnaps~totwrk+HighSchool+Undergraduate+Graduate,data = sleep75)
+summary(cate.fit)
+vcov(cate.fit)
+
+continous.fit <- lm(slpnaps~totwrk+educ,data = sleep75)
+summary(continous.fit)
+```
+
+
+#### Coding Exercise: Test the null hypothesis that: Graduates have the same sleep time as the HighSchool students conditional on that they work the same time at 0.05 significance level.
+
+```{r}
+# F.test
+linearHypothesis(cate.fit,"HighSchool=Graduate",type="F")
+# critical value
+r <- 1
+n <- dim(sleep75)[1]
+k <- 4
+qf(.95,1,n-k-1)
+
+#t.test
+t.stat <- (cate.fit$coefficients["HighSchool"]-cate.fit$coefficients["Graduate"])/sqrt(6.269710e+03 +4.893390e+03-2*3.686753e+03)
+t.stat
+#t.stat^2
+
+# critical value
+qt(.975,n-k-1)
+
+# results
+# We fail to reject the null hypothesis.
+```
+
+### 4. Regression without intercepts
+
+#### Compare the results. 
+
+No intercept is a very strong assumption. 
+
+```{r}
+no.fit <- lm(slpnaps~totwrk-1,data = sleep75)
+summary(no.fit)
+summary(level.level.fit)
+
+```

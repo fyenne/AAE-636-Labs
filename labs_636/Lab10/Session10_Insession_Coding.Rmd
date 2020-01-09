@@ -1,0 +1,248 @@
+---
+title: "Session10 In-Session Exercise"
+author: "Sunny"
+date: "12/06/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=T, include=FALSE}
+## 0. General setups as usual
+## References: 
+
+##Set your own directory
+# setwd("~/AAE636/Session10")
+# rm(list=ls())
+
+##Install Wooldridge data
+library(dplyr)# this is for mutate function
+library(magrittr) # this is for the Pipe function %>%
+library(psych)
+library(readstata13)# this is for reading the new version of dta data.
+library(car)
+library(data.table)
+library(knitr)
+library(ggplot2)
+
+library(lmtest) #for coeftest() and bptest().
+library(broom) #for glance() and tidy()
+library(car) #for hccm() robust standard errors
+library(RCurl)# For the robust SE method 1
+library(sandwich)
+
+library(plm)# this package is for panel regression
+library(multiwayvcov)# this package is for defining the proper cluster.
+library(AER)# this package is for the ivreg
+```
+
+### 1. Measurement Errors and IV regression
+```{r, warning = F}
+# read the data
+data("CigarettesSW", package = "AER")
+
+#Main question to answer：how will the change in the price can impact the consumption of the cigirates?
+
+# variables we are going to use:
+## dependent variable: packs  y
+## independent variable: price  x
+
+#Generate the hypothetical measurement error
+CigarettesSW <- CigarettesSW %>%
+  mutate(r1.packs = round(packs),
+         e1 = r1.packs-packs,
+         r2.packs = signif(packs,digits = 2),
+         e2 = r2.packs-packs,
+         r1.price = round(price),
+         eps1 = r1.price-price,
+         r2.price = signif(price,digits = 2),
+         eps2 = r2.price-price)
+
+attach(CigarettesSW)
+
+ols.fit <- lm(packs ~ price,data=CigarettesSW)
+summary(ols.fit)$coefficient
+u <- resid(ols.fit)
+#measurement error in y
+var(e1)
+var(e2)
+
+# check the measurement error assumption
+mean(e1)
+cov(e1,packs)
+cov(e1,price)
+cov(u,e1)
+
+mean(e2)
+cor(e2,packs)
+cor(e2,price)
+cor(u,e2)
+#we cannot check this in reality since we in general don't have the correct data without measurement errors.
+
+#measurement error in x
+var(eps1)
+var(eps2)
+
+#check whether we can make the classic measurement error assumption
+mean(eps1)
+cov(eps1,price)
+cov(u,eps1)
+
+mean(eps2)
+cov(eps2,price)
+cov(u,eps2)
+
+#what happens with the regression
+ols.fit <- lm(packs ~ price,data=CigarettesSW)
+summary(ols.fit)$coefficient
+# confint(ols.fit, level = 0.95) # confidence interval
+
+r1.fit <- lm(r1.packs ~ price,data=CigarettesSW) #same as last one
+summary(r1.fit)$coefficient
+r2.fit <- lm(r2.packs ~ price,data=CigarettesSW)
+summary(r2.fit)$coefficient  # different coefficient and SE
+
+```
+
+
+```{r}
+#With the classical measurement error in the dependent variable, what will happen with the S.E.? Are the estimation results consistant with your prediction? 
+
+############################################
+############Your Idea Here##################
+############################################
+
+#what happens with the regression
+ols.fit <- lm(packs ~ price,data=CigarettesSW)
+summary(ols.fit)$coefficient
+
+r1.fit <- lm(packs ~ r1.price,data=CigarettesSW)  
+summary(r1.fit)$coefficient  # higher SE than the next formula
+r2.fit <- lm(packs ~ r2.price,data=CigarettesSW)
+summary(r2.fit)$coefficient
+
+#With the classical measurement error in the independent variable, what will happen with the coefficients? Is your estimation consistant with your prediction
+
+############################################
+############Your Idea Here##################
+############################################
+```
+
+for those x has measurement error
+
+
+$y^\star = \beta_0 + \beta_1 \cdot x^\star + u$ 
+
+<!-- the origin function -->
+<!-- #-------------------------------------------- -->
+
+$y = \beta_0 + \beta_1 \cdot x^\star + u  + e $  
+<!-- this has measurement error on y -->
+
+$plim(\beta_1) = \frac {Cov(x,y)}{Var(x)}  =\beta_1 + \frac {cov(e,x^\star)}{var(x^\star)}$
+here we have $y^\star$ or $x^\star$ plug inand the cov term can be expanded to the y x formula.
+
+
+
+$var(\hat \beta_1)$
+
+
+<!-- #-------------------------------------------- -->
+
+for those x has measurement error
+
+$$
+\begin{eqnarray*}
+y^\star &&= \beta_0 + \beta_1 \cdot (x^\star -w )+ u \\&&
+  = \beta_1 + \beta_1 \frac{\sigma_w^2}{\sigma^2_{x^\star } +\sigma_w^2} 
+\tag{1-b.}
+\end{eqnarray*}
+$$
+
+
+```{r}
+#Calculate the probability limit of the coefficient under the assmption that r1.price has the classical measurement error.
+
+############################################
+############Your Idea Here##################
+############################################
+
+# Now we suspect that price is correlated with the error term, we would like to use an instrument tdiff
+CigarettesSW$tdiff <- with(CigarettesSW, (taxs - tax)) 
+
+# iv model fit
+fit_iv <- ivreg(packs ~ price | tdiff,  data = CigarettesSW)
+summary(fit_iv)
+
+# iv step by step(however, the variance is incorrect this way, this is only for the coefficients)
+
+##Method 1.
+# the IV estimator can be written as the ratio of the reduced form coefficient on the instrument to the first stage coefficient on the instrument.
+
+############################################
+############Your Code Here##################
+############################################
+
+##Method 2.
+# the IV estimator can be written as the coefficient on the predicted endogenous variable from the first stage estimation on the instrument.
+############################################
+############Your Code Here##################
+############################################
+
+```
+
+### 2. More about clustering
+
+```{r}
+murder <- read.dta13("../Lab10/MURDER.dta")
+
+#if you are using the robust option in lm, make sure you loaded the function first, otherwise it is not working automatically.
+url_robust <- "https://raw.githubusercontent.com/IsidoreBeautrelet/economictheoryblog/master/robust_summary.R"
+eval(parse(text = getURL(url_robust, ssl.verifypeer = FALSE)),envir=.GlobalEnv)
+```
+
+
+```{r}
+#When you are using the lm command, we can generate the same robust or clustered S.E. from the following commands.
+
+pooling.fit <- lm(mrdrte~exec+unem+d93, data = murder, subset = ((year==90)|(year==93)))
+
+#robust S.E.
+summary(pooling.fit)$coefficient  # SE different than the robust = True.
+summary(pooling.fit, robust = T)$coefficient # this is working ONLY with lm function.
+
+#clustered S.E.
+#Method 1. This is the same as the Stata results.
+vcov_dist <- cluster.vcov(pooling.fit, murder$state[(murder$year==90)|(murder$year==93)])
+coeftest(pooling.fit, vcov = vcov_dist)
+
+#Method 2. This is generally different from the Stata results.
+coeftest(pooling.fit, vcov = vcovHC(pooling.fit, cluster = "state"))
+
+#When you are using the plm command:
+fd.fit1 <- plm(mrdrte~exec+unem, data = murder, 
+   index = c("state","year"), 
+   model = "fd",
+   subset = ((year==90)|(year==93)))
+summary(fd.fit1)$coefficient
+summary(fd.fit1, robust = T)$coefficient #no effect at all
+#--------------------------------------------
+
+#coeftest(fd.fit1, vcov = vcovHC(fd.fit1, cluster = "HC1")) is not working properly.
+
+#This is working properly with the plm function for the robust S.E.
+coeftest(fd.fit1, vcov = vcovHC, type = "HC0")
+
+#For the clustered S.E.
+#This clustering is only working with "group" and "time" clustering, which is reasonable. Since it is easy to argue that for each of the group, or during the same time, the variance is correlated with each other. 
+
+coeftest(fd.fit1, vcovHC(fd.fit1, type = 'HC1', cluster = 'group')) # It is argued on the internet that this one can generate the same clustered S.E. as in Stata.
+
+coeftest(fd.fit1, vcovHC(fd.fit1, cluster = 'group'))
+
+#You are welcome to find out more about the robust and clustered S.E. methods using R and choose yours in your future work.
+```
+

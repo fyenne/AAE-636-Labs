@@ -1,0 +1,177 @@
+---
+title: "Session7 In-Session Coding Exercise"
+author: "Sunny"
+date: "10/31/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=T, include=FALSE}
+## 0. General setups as usual
+## References: https://www.princeton.edu/~otorres/DID101R.pdf; https://dhicks.github.io/2018-10-10-did/
+##Set your own directory
+# setwd("~/AAE636/Session7")
+rm(list=ls())
+
+##Install Wooldridge data
+library(dplyr)# this is for mutate function
+library(magrittr) # this is for the Pipe function %>%
+library(psych)
+library(foreign)# this package contains read.dta command
+library(car)
+library(data.table)
+library(ggplot2)
+library(RCurl)# For the robust SE method 1
+library(lmtest) #For the robust SE method 2
+library(sandwich) #For the robust SE method 2
+```
+
+### 1. Diff-in-Diff
+
+Example Code:
+```{r}
+
+# Getting sample data.
+mydata = read.dta("http://dss.princeton.edu/training/Panel101.dta")
+
+# Create a dummy variable to indicate the time when the treatment started. Lets assume that treatment started in 1994. In this case, years before 1994 will have a value of 0 and the year of 1994 and years after 1994 will have a value of 1. 
+mydata$time = ifelse(mydata$year >= 1994, 1, 0)
+
+# Create a dummy variable to identify the group exposed to the treatment. In this example lets assumed that countries with code country code "E", "F" and "G" were treated (=1).
+mydata$treated = ifelse(mydata$country == "E" |
+                        mydata$country == "F" |
+                        mydata$country == "G", 1, 0)
+
+# Create an interaction between time and treated. We will call this interaction "did".
+mydata$did = mydata$time * mydata$treated
+
+mydata = mydata %>%
+    mutate(treated.log = (country ==  "E" |
+                          country == "F" |
+                          country == "G"))
+
+#Not a great example for the DID model, you should justify the control group by proving the parrallel trend before applying DID model.
+
+ggplot(mydata, aes(year, y, color = treated.log)) +
+    geom_point(aes(col=treated.log)) +
+    stat_summary(geom = 'line') +
+    geom_vline(xintercept = 1994) +
+    theme_minimal()
+
+```
+
+```{r }
+# Estimating the DID model
+# Method 1.
+didreg <- lm(y ~ treated + time + did, data = mydata)
+summary(didreg)
+
+# Method 2.
+didreg1 <- lm(y ~ treated*time, data = mydata)
+summary(didreg1)
+
+```
+#### 2. Heteroskedesticity and Robust Standard Errors
+
+Example code:
+```{r}
+
+#Method 1: this will generate the same result as stata
+# import the function from repository
+url_robust <- "https://raw.githubusercontent.com/IsidoreBeautrelet/economictheoryblog/master/robust_summary.R"
+eval(parse(text = getURL(url_robust, ssl.verifypeer = FALSE)),envir=.GlobalEnv)
+
+summary(didreg1, robust = T)$coefficient
+
+#Method 2:We will see this function again when we talk about the clustered standard errors.
+coeftest(didreg1, vcov = vcovHC(didreg1, cluster = "HC0"))
+
+```
+
+#### In-Session Coding:
+We are interested in examing the policy effect on whether one family works or not: 
+The earned income tax credit (EITC) policy took effect in the year of 1994; and the group that benefited from the policy was the families with dependent children.
+
+##### 1. write down your estimation equation.
+$\beta_1year + \beta_2$
+##### 2. write the code for your estimation:
+```{r}
+eitc <- read.dta("./eitc.dta")
+
+## Create the dummies for the time of the treatment and the treatment group.
+
+##variable name: children
+eitc <- mutate(eitc, ifelse(children == 0 , 0 ,1))
+names(eitc)[12]=  "treated"
+##variable name: year
+eitc <-  mutate(eitc, ifelse(year < 1994, 0, 1))
+names(eitc)[13] = "time"
+
+eitc <- eitc %>%  
+    mutate(post93= year >= 1994,
+           anykids = children >=1)
+## Plot the data to show the change
+p <- ggplot(eitc) + aes(year, work, color  = anykids) + #geom_point()+
+    stat_summary(geom = 'line') #+
+    # geom_vline(xintercept = 1994) +
+     theme_minimal()
+p
+## Run the DID regression
+fit1 <- lm(work~treated* time, eitc)
+summary(fit1)
+
+```
+
+##### 3. By using your regression equation and estimation results, answer the following questions:
+
+##### a. what is the expected probability of working for one family without children before 1994? what is your estimate?
+
+$$
+\begin{eqnarray*}
+work  = \beta_1 treated \cdot time + \beta_0
+\tag{1-a.}
+\end{eqnarray*}
+$$
+
+##### b. what is the expected probability of working for one family without children in and after 1994? what is your estimate?
+
+##### c. what is the expected effect of the policy to the group without children?
+
+##### d. what is the expected probability of working for one family with children before 1994? what is your estimate?
+
+##### e. what is the expected probability of working for one family with children in and after 1994? what is your estimate?
+
+##### f.what is the expected effect of the policy to the group with children? what is your estimate?
+
+##### 4. Adding controls for your regression
+##### Do you think not adding the controls could bias your estimation results? Explain.
+```{r}
+## Add education and age: variable name "ed" and "age", in your regression
+
+## Run the DID regression with controls
+fit2 <- lm(work~treated*time +ed+age, eitc)
+summary(fit2)
+
+```
+
+
+##### 5. Hypothesis Testing
+```{r}
+## t-test of the expected effect of age and education on y (the probability of working) are the same.
+linearHypothesis(fit2, c("age = ed"))
+k <- 3 
+n <- dim(eitc)[1]
+qf(.95, k, n-k-1)
+isTRUE(110.44>qf(.95, k, n-k-1))
+## F-test of the expected effect of age and education on y (the probability of working) both equal to 0.
+linearHypothesis(fit2, c("age = 0", "ed = 0"))
+r1 <- 2#num of restriction,
+r2 <- n-k-1 #
+F_fit22 <-  isTRUE(71.625 > qf(.95, k, n-k-1))
+F_fit22
+```
+
